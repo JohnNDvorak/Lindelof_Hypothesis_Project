@@ -37,6 +37,26 @@ class LocalMomentConfig:
 
 
 @dataclass
+class RatioMomentDecomposition:
+    """Decomposition of ratio-domain moment into diagonal and off-diagonal parts.
+
+    The total moment M = M_diag + M_off where:
+    - M_diag = Σ_n |a_n|² n^{-2σ}  (diagonal terms, always positive)
+    - M_off = M - M_diag  (off-diagonal terms, oscillatory in T)
+
+    Attributes:
+        total: Total moment (real part)
+        diagonal: Diagonal contribution (always positive)
+        off_diagonal: Off-diagonal contribution (can be negative)
+        off_over_diag: Ratio off_diagonal / diagonal (measures relative contribution)
+    """
+    total: float
+    diagonal: float
+    off_diagonal: float
+    off_over_diag: float
+
+
+@dataclass
 class LocalMomentResult:
     """Result of localized moment computation.
 
@@ -158,6 +178,73 @@ def compute_ratio_domain_moment(
                 total += term
 
     return np.real(total)
+
+
+def compute_ratio_domain_decomposed(
+    coeffs: np.ndarray,
+    config: LocalMomentConfig,
+) -> RatioMomentDecomposition:
+    """Compute ratio-domain moment with diagonal/off-diagonal decomposition.
+
+    Separates the total moment into:
+    - Diagonal: Σ_n |a_n|² n^{-2σ} · ŵ(0) = Σ_n |a_n|² n^{-2σ}  (since ŵ(0) = 1)
+    - Off-diagonal: Everything else
+
+    This decomposition reveals whether interference effects are hiding
+    in the off-diagonal terms, masked by diagonal drift.
+
+    Args:
+        coeffs: Dirichlet polynomial coefficients
+        config: Localization configuration
+
+    Returns:
+        RatioMomentDecomposition with total, diagonal, off_diagonal, and ratio
+    """
+    kernel = FejerKernel(config.Delta)
+    N = len(coeffs) - 1
+    sigma = config.sigma
+    T = config.T
+
+    a = coeffs[1:N+1]  # shape (N,)
+    n = np.arange(1, N + 1, dtype=np.float64)
+
+    # Precompute n^{-sigma} and log(n)
+    n_pow = n ** (-sigma)
+    log_n = np.log(n)
+
+    # Diagonal: Σ |a_n|² n^{-2σ}
+    # Note: ŵ(0) = 1 and exp(-iT·0) = 1, so diagonal is simple
+    diagonal = np.sum(np.abs(a)**2 * n_pow**2)
+
+    # Off-diagonal: sum over i != j
+    off_diagonal = 0.0 + 0.0j
+
+    for i in range(N):
+        for j in range(N):
+            if i == j:
+                continue  # Skip diagonal
+            log_ratio = log_n[i] - log_n[j]
+            w_hat = kernel.w_freq(log_ratio)
+            if w_hat > 0:
+                term = (a[i] * np.conj(a[j]) * n_pow[i] * n_pow[j]
+                        * w_hat * np.exp(-1j * T * log_ratio))
+                off_diagonal += term
+
+    off_diagonal_real = np.real(off_diagonal)
+    total = diagonal + off_diagonal_real
+
+    # Compute ratio (avoid div by zero)
+    if abs(diagonal) > 1e-15:
+        off_over_diag = off_diagonal_real / diagonal
+    else:
+        off_over_diag = 0.0
+
+    return RatioMomentDecomposition(
+        total=total,
+        diagonal=diagonal,
+        off_diagonal=off_diagonal_real,
+        off_over_diag=off_over_diag,
+    )
 
 
 def verify_moment_consistency(

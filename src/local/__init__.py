@@ -39,9 +39,18 @@ from src.local.dirichlet_poly import (
 from src.local.local_moment import (
     LocalMomentConfig,
     LocalMomentResult,
+    RatioMomentDecomposition,
     compute_local_moment,
     compute_ratio_domain_moment,
+    compute_ratio_domain_decomposed,
     verify_moment_consistency,
+)
+from src.local.ratio_classes import (
+    RatioClassContribution,
+    RatioClassDecomposition,
+    compute_ratio_class_contribution,
+    compute_ratio_classes,
+    print_ratio_class_table,
 )
 
 
@@ -209,6 +218,55 @@ class LocalEngine:
         coeffs = self.get_combined_coeffs() if use_combined else self.get_active_coeffs()
         return verify_moment_consistency(coeffs, config, rtol)
 
+    def compute_decomposed(
+        self,
+        T: float,
+        Delta: float,
+        use_combined: bool = False,
+    ) -> RatioMomentDecomposition:
+        """Compute ratio-domain moment with diagonal/off-diagonal decomposition.
+
+        This separates the moment into:
+        - Diagonal: Σ_n |a_n|² n^{-2σ}  (always positive)
+        - Off-diagonal: Everything else (oscillatory in T)
+
+        Args:
+            T: Center time
+            Delta: Bandwidth
+            use_combined: If True, use combined coefficients
+
+        Returns:
+            RatioMomentDecomposition with total, diagonal, off_diagonal, and ratio
+        """
+        config = LocalMomentConfig(T=T, Delta=Delta, sigma=self.config.sigma)
+        coeffs = self.get_combined_coeffs() if use_combined else self.get_active_coeffs()
+        return compute_ratio_domain_decomposed(coeffs, config)
+
+    def compute_ratio_classes(
+        self,
+        T: float,
+        Delta: float,
+        A_max: int = 50,
+        use_combined: bool = False,
+    ) -> RatioClassDecomposition:
+        """Decompose moment by ratio classes (A, B).
+
+        Identifies which specific coprime pairs (A, B) drive the off-diagonal
+        contribution to the localized moment.
+
+        Args:
+            T: Center time
+            Delta: Bandwidth
+            A_max: Maximum value for A and B in the search
+            use_combined: If True, use combined coefficients
+
+        Returns:
+            RatioClassDecomposition with sorted list of contributions
+        """
+        config = LocalMomentConfig(T=T, Delta=Delta, sigma=self.config.sigma)
+        coeffs = self.get_combined_coeffs() if use_combined else self.get_active_coeffs()
+        return compute_ratio_classes(coeffs, config, A_max=A_max)
+
     def evaluate_dirichlet(
         self,
         t_grid: np.ndarray,
@@ -245,9 +303,17 @@ __all__ = [
     # Moment
     'LocalMomentConfig',
     'LocalMomentResult',
+    'RatioMomentDecomposition',
     'compute_local_moment',
     'compute_ratio_domain_moment',
+    'compute_ratio_domain_decomposed',
     'verify_moment_consistency',
+    # Ratio classes
+    'RatioClassContribution',
+    'RatioClassDecomposition',
+    'compute_ratio_class_contribution',
+    'compute_ratio_classes',
+    'print_ratio_class_table',
     # Engine
     'LocalEngineConfig',
     'LocalEngine',

@@ -140,6 +140,89 @@ class TestDeltaFromFirstZero:
             delta_from_first_zero(-5.0)
 
 
+class TestRequiredHalfwidth:
+    """Tests for tail-mass based halfwidth computation."""
+
+    def test_required_halfwidth_formula(self):
+        """U = 1/(π·Δ·eps_mass)."""
+        kernel = FejerKernel(Delta=1.0)
+        eps_mass = 0.01
+
+        U = kernel.required_halfwidth(eps_mass)
+        expected = 1.0 / (np.pi * kernel.Delta * eps_mass)
+
+        assert np.isclose(U, expected)
+
+    def test_required_halfwidth_delta_dependence(self):
+        """Larger Delta means smaller required halfwidth."""
+        eps_mass = 0.01
+
+        kernel1 = FejerKernel(Delta=0.5)
+        kernel2 = FejerKernel(Delta=2.0)
+
+        U1 = kernel1.required_halfwidth(eps_mass)
+        U2 = kernel2.required_halfwidth(eps_mass)
+
+        # Larger Delta → smaller U (inversely proportional)
+        assert U1 > U2
+        assert np.isclose(U1 / U2, 4.0)  # ratio of Deltas inverted
+
+    def test_required_halfwidth_eps_dependence(self):
+        """Smaller eps_mass means larger required halfwidth."""
+        kernel = FejerKernel(Delta=1.0)
+
+        U1 = kernel.required_halfwidth(0.01)
+        U2 = kernel.required_halfwidth(0.001)
+
+        # Smaller eps_mass → larger U (inversely proportional)
+        assert U2 > U1
+        assert np.isclose(U2 / U1, 10.0)
+
+    def test_required_halfwidth_invalid(self):
+        """Should reject non-positive eps_mass."""
+        kernel = FejerKernel(Delta=1.0)
+        with pytest.raises(ValueError):
+            kernel.required_halfwidth(0.0)
+        with pytest.raises(ValueError):
+            kernel.required_halfwidth(-0.01)
+
+    def test_required_halfwidth_in_zeros(self):
+        """n_halfwidth = U / first_zero."""
+        kernel = FejerKernel(Delta=1.0)
+        eps_mass = 0.01
+
+        n_halfwidth = kernel.required_halfwidth_in_zeros(eps_mass)
+        U = kernel.required_halfwidth(eps_mass)
+
+        assert np.isclose(n_halfwidth, U / kernel.first_zero)
+
+    def test_tail_mass_bound_empirical(self):
+        """Verify empirically that tail mass is bounded.
+
+        The approximation ∫_{|t|>U} w(t) dt ≈ 1/(π·Δ·U) is asymptotic;
+        actual tail mass is higher by a constant factor.
+        """
+        kernel = FejerKernel(Delta=1.0)
+        eps_mass = 0.01
+
+        U = kernel.required_halfwidth(eps_mass)
+
+        # Numerically compute tail mass
+        # Integrate from -U to U and compare to total integral
+        # Total integral should be 1, so tail mass = 1 - inner integral
+        t_inner = np.linspace(-U, U, 10001)
+        dt = t_inner[1] - t_inner[0]
+        w_inner = kernel.w_time(t_inner)
+        inner_integral = np.sum(w_inner) * dt
+
+        tail_mass = 1.0 - inner_integral
+
+        # Tail mass should be within factor of 3 of eps_mass
+        # (the asymptotic approximation has O(1) corrections)
+        assert tail_mass < 3 * eps_mass
+        assert tail_mass > 0.5 * eps_mass  # shouldn't be too small either
+
+
 class TestNormalization:
     """Test normalization properties of the Fejer kernel."""
 

@@ -107,6 +107,46 @@ class FejerKernel:
         # Solve for w(t)/w(0) = tolerance: t = 2*pi / (Delta * sqrt(tolerance))
         return 2 * np.pi / (self.Delta * np.sqrt(tolerance))
 
+    def required_halfwidth(self, eps_mass: float = 1e-3) -> float:
+        """Compute halfwidth U such that tail mass is bounded by eps_mass.
+
+        The Fejér kernel has tail mass:
+            ∫_{|t|>U} w(t) dt ≈ 1/(π·Δ·U)
+
+        So to achieve tail mass < eps_mass, we need:
+            U > 1/(π·Δ·eps_mass)
+
+        Args:
+            eps_mass: Target tail mass (fraction of total integral that's dropped)
+
+        Returns:
+            Halfwidth U in absolute time units
+
+        Example:
+            With Delta=0.5 and eps_mass=0.01 (1% tail):
+            U = 1/(π·0.5·0.01) ≈ 63.66
+
+            With Delta=1.0 and eps_mass=0.001 (0.1% tail):
+            U = 1/(π·1.0·0.001) ≈ 318.3
+        """
+        if eps_mass <= 0:
+            raise ValueError("eps_mass must be positive")
+        return 1.0 / (np.pi * self.Delta * eps_mass)
+
+    def required_halfwidth_in_zeros(self, eps_mass: float = 1e-3) -> float:
+        """Compute halfwidth in units of first_zero for given tail mass.
+
+        This is convenient for setting n_halfwidth in LocalMomentConfig.
+
+        Args:
+            eps_mass: Target tail mass
+
+        Returns:
+            n_halfwidth = U / first_zero
+        """
+        U = self.required_halfwidth(eps_mass)
+        return U / self.first_zero
+
 
 def delta_from_first_zero(L: float) -> float:
     """Compute Delta such that first zero is at t = L.

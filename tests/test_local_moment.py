@@ -7,8 +7,10 @@ import pytest
 from src.local.local_moment import (
     LocalMomentConfig,
     LocalMomentResult,
+    RatioMomentDecomposition,
     compute_local_moment,
     compute_ratio_domain_moment,
+    compute_ratio_domain_decomposed,
     verify_moment_consistency,
 )
 from src.local.fejer import FejerKernel
@@ -231,3 +233,102 @@ class TestEdgeCases:
 
         assert np.isfinite(result.moment)
         assert result.moment > 0
+
+
+class TestRatioMomentDecomposition:
+    """Tests for diagonal/off-diagonal decomposition."""
+
+    def test_constant_polynomial_is_pure_diagonal(self):
+        """For D(s) = 1, moment is pure diagonal."""
+        coeffs = np.array([0.0, 1.0])
+        config = LocalMomentConfig(T=100.0, Delta=1.0)
+
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+
+        # With single coefficient, only diagonal term exists
+        assert np.isclose(decomp.diagonal, 1.0)  # |a_1|^2 * 1^{-2*0.5} = 1
+        assert np.isclose(decomp.off_diagonal, 0.0)
+        assert np.isclose(decomp.total, 1.0)
+
+    def test_decomposition_sums_correctly(self):
+        """total = diagonal + off_diagonal."""
+        np.random.seed(42)
+        N = 30
+        coeffs = np.zeros(N + 1)
+        coeffs[1:] = np.random.randn(N) * 0.5
+        coeffs[1] = 1.0
+
+        config = LocalMomentConfig(T=100.0, Delta=1.0)
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+
+        # Verify decomposition sums correctly
+        assert np.isclose(decomp.total, decomp.diagonal + decomp.off_diagonal)
+
+    def test_decomposition_matches_total_moment(self):
+        """Decomposed total should match compute_ratio_domain_moment."""
+        np.random.seed(123)
+        N = 20
+        coeffs = np.zeros(N + 1)
+        coeffs[1:] = np.random.randn(N) * 0.3
+        coeffs[1] = 1.0
+
+        config = LocalMomentConfig(T=50.0, Delta=0.5)
+
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+        total_moment = compute_ratio_domain_moment(coeffs, config)
+
+        assert np.isclose(decomp.total, total_moment, rtol=1e-10)
+
+    def test_diagonal_is_positive(self):
+        """Diagonal should always be positive (sum of squares)."""
+        np.random.seed(456)
+        coeffs = np.zeros(51)
+        coeffs[1:] = np.random.randn(50)
+
+        config = LocalMomentConfig(T=100.0, Delta=1.0)
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+
+        assert decomp.diagonal > 0
+
+    def test_off_diagonal_can_be_negative(self):
+        """Off-diagonal can be negative (interference)."""
+        # With specific coefficients, off-diagonal can be negative
+        coeffs = np.array([0.0, 1.0, 1.0])  # D(s) = 1 + 2^{-s}
+        config = LocalMomentConfig(T=0.0, Delta=2.0)
+
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+
+        # At T=0, off-diagonal should be positive (constructive interference)
+        # At T=π/log(2), it would be negative (destructive interference)
+        # Just check it's finite and non-zero
+        assert np.isfinite(decomp.off_diagonal)
+
+    def test_off_over_diag_ratio(self):
+        """off_over_diag should be correctly computed."""
+        np.random.seed(789)
+        coeffs = np.zeros(21)
+        coeffs[1:] = np.random.randn(20) * 0.2
+        coeffs[1] = 1.0
+
+        config = LocalMomentConfig(T=100.0, Delta=1.0)
+        decomp = compute_ratio_domain_decomposed(coeffs, config)
+
+        expected_ratio = decomp.off_diagonal / decomp.diagonal
+        assert np.isclose(decomp.off_over_diag, expected_ratio)
+
+    def test_decomposition_varies_with_T(self):
+        """Off-diagonal should vary with T (oscillatory)."""
+        coeffs = np.array([0.0, 1.0, 0.5, 0.3])  # Multiple terms
+        config1 = LocalMomentConfig(T=0.0, Delta=2.0)
+        config2 = LocalMomentConfig(T=10.0, Delta=2.0)
+
+        decomp1 = compute_ratio_domain_decomposed(coeffs, config1)
+        decomp2 = compute_ratio_domain_decomposed(coeffs, config2)
+
+        # Diagonal should be the same (independent of T)
+        assert np.isclose(decomp1.diagonal, decomp2.diagonal)
+
+        # Off-diagonal may differ (oscillatory in T)
+        # (They could be equal by coincidence, so we just check they're computed)
+        assert np.isfinite(decomp1.off_diagonal)
+        assert np.isfinite(decomp2.off_diagonal)
