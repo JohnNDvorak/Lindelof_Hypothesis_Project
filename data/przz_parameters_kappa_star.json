@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "source": "PRZZ (arXiv:1802.10521) Section 8 - Lines 2587-2598",
+    "description": "Parameters for K=3, d=1 mollifier achieving kappa* >= 0.407511457 (simple zeros)",
+    "extracted_from": "RMS_PRZZ.tex lines 2587-2598",
+    "extracted_on": "2025-12-16",
+    "note": "This is the SECOND benchmark set, different from the main kappa benchmark"
+  },
+
+  "configuration": {
+    "K": 3,
+    "d": 1,
+    "theta": 0.5714285714285714,
+    "theta_exact": "4/7",
+    "R": 1.1167
+  },
+
+  "polynomials": {
+    "P1": {
+      "description": "P1(x) = x + x(1-x)*P_tilde(x), satisfies P1(0)=0, P1(1)=1",
+      "form": "constrained",
+      "display": "x + 0.052703*x(1-x) - 0.657999*x(1-x)^2 - 0.003193*x(1-x)^3 - 0.101832*x(1-x)^4",
+      "tilde_coeffs": [0.052703, -0.657999, -0.003193, -0.101832],
+      "tilde_basis": "powers of (1-x): c0 + c1*(1-x) + c2*(1-x)^2 + c3*(1-x)^3"
+    },
+
+    "P2": {
+      "description": "P2(x) = x*P_tilde(x), satisfies P2(0)=0",
+      "form": "monomial",
+      "display": "1.049837*x - 0.097446*x^2",
+      "tilde_coeffs": [1.049837, -0.097446],
+      "coeffs": [0.0, 1.049837, -0.097446],
+      "note": "coeffs[0] is always 0 by constraint; tilde_coeffs = coeffs[1:]"
+    },
+
+    "P3": {
+      "description": "P3(x) = x*P_tilde(x), satisfies P3(0)=0",
+      "form": "monomial",
+      "display": "0.035113*x - 0.156465*x^2",
+      "tilde_coeffs": [0.035113, -0.156465],
+      "coeffs": [0.0, 0.035113, -0.156465],
+      "note": "coeffs[0] is always 0 by constraint; tilde_coeffs = coeffs[1:]"
+    },
+
+    "Q": {
+      "description": "Q(x) in LINEAR (1-2x) basis, satisfies Q(0)=1",
+      "form": "przz_basis_linear",
+      "display": "0.483777 + 0.516223*(1-2x)",
+      "coeffs_in_basis_terms": [
+        {"k": 0, "c": 0.483777},
+        {"k": 1, "c": 0.516223}
+      ],
+      "coeffs_in_basis": {
+        "constant": 0.483777,
+        "power_1": 0.516223
+      },
+      "Q0_sum": 1.0,
+      "Q0_expected": 1.0,
+      "note": "Linear Q - only constant and (1-2x)^1 terms. Sum is exactly 1.0"
+    }
+  },
+
+  "targets": {
+    "c": 1.9379524124677437,
+    "c_formula": "exp(R*(1-kappa)) = exp(1.1167*(1-0.407511457))",
+    "kappa": 0.407511457,
+    "kappa_display": ">= 0.407511457",
+    "note": "kappa* denotes proportion of SIMPLE zeros on critical line"
+  },
+
+  "formulas": {
+    "kappa_from_c": "kappa = 1 - log(c)/R",
+    "c_from_kappa": "c = exp(R*(1-kappa))"
+  },
+
+  "self_consistency": {
+    "note": "These computed values should match targets within numerical precision",
+    "kappa_from_c_numeric": 0.407511457,
+    "c_from_kappa_numeric": 1.9379524124677437
+  },
+
+  "validation": {
+    "tolerance_c": 1e-5,
+    "tolerance_kappa": 1e-6
+  }
+}

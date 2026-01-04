@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "description": "Golden output snapshot for PRZZ kappa production engine",
+    "created": "2025-12-27",
+    "version": "Phase 46++ (THETA_CUBED formula)",
+    "n_quad": 80,
+    "formulas": {
+      "g_I1": "1 + theta(1-theta)(2(K-1)+theta) / (8K(2K+1)^2)",
+      "g_I2": "1 + theta(2-theta) / (2K(2K+1))",
+      "base": "exp(R) + (2K-1)",
+      "c": "S12(+R) + m * S12(-R) + S34(+R)",
+      "kappa": "1 - log(c) / R"
+    },
+    "notes": [
+      "All formulas are first-principles - NO calibrated constants",
+      "The (3/28) coefficient in g_I1 is derived, not empirical",
+      "Production use: src/kappa_engine.py"
+    ]
+  },
+  "parameters": {
+    "theta": 0.5714285714285714,
+    "theta_exact": "4/7",
+    "K": 3
+  },
+  "derived_constants": {
+    "g_I1": 1.0009519842922592,
+    "g_I2": 1.0194363459669582,
+    "description": "First-principles formulas, NO calibrated constants"
+  },
+  "kappa_benchmark": {
+    "R": 1.3036,
+    "kappa_target": 0.417293962,
+    "c_target": 2.1374544061321727,
+    "kappa_computed": 0.41729593302071,
+    "c_computed": 2.137448914115576,
+    "kappa_gap_pct": 0.000472,
+    "c_gap_pct": -0.000257,
+    "S12_plus": 0.7974773838879969,
+    "S12_minus": 0.22012066410923858,
+    "S34_plus": -0.6001517660964744,
+    "f_I1": 0.2329010851983756,
+    "g_total": 1.0151313180737216,
+    "m": 8.813908063448487
+  },
+  "kappa_star_benchmark": {
+    "R": 1.1167,
+    "kappa_target": 0.407511457,
+    "c_target": 1.9379524112,
+    "kappa_computed": 0.40750978989231956,
+    "c_computed": 1.937956015958636,
+    "kappa_gap_pct": -0.000409,
+    "c_gap_pct": 0.000186,
+    "S12_plus": 0.6145819659173379,
+    "S12_minus": 0.21644382412359317,
+    "S34_plus": -0.44339786292278405,
+    "f_I1": 0.3263184722598314,
+    "g_total": 1.0134045573045722,
+    "m": 8.162727304038135
+  },
+  "tolerances": {
+    "kappa_gap_pct": 0.001,
+    "c_gap_pct": 0.001,
+    "description": "Both benchmarks must pass within 0.001%"
+  }
+}

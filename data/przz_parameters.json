@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "source": "PRZZ (arXiv:1802.10521) Section 8 - Lines 2567-2586",
+    "description": "Parameters for K=3, d=1 mollifier achieving kappa >= 0.417293962",
+    "extracted_from": "RMS_PRZZ.tex lines 2567-2586",
+    "extracted_on": "2025-12-17",
+    "note": "REVERTED to correct PRZZ polynomials with degree-5 Q"
+  },
+
+  "configuration": {
+    "K": 3,
+    "d": 1,
+    "theta": 0.5714285714285714,
+    "theta_exact": "4/7",
+    "R": 1.3036
+  },
+
+  "polynomials": {
+    "P1": {
+      "description": "P1(x) = x + x(1-x)*P_tilde(x), satisfies P1(0)=0, P1(1)=1",
+      "form": "constrained",
+      "display": "x + 0.261076*x(1-x) - 1.071007*x(1-x)^2 - 0.236840*x(1-x)^3 + 0.260233*x(1-x)^4",
+      "tilde_coeffs": [0.261076, -1.071007, -0.236840, 0.260233],
+      "tilde_basis": "powers of (1-x): c0 + c1*(1-x) + c2*(1-x)^2 + c3*(1-x)^3",
+      "note": "4 tilde coefficients for x(1-x)^k, k=1,2,3,4"
+    },
+
+    "P2": {
+      "description": "P2(x) = x*P_tilde(x), satisfies P2(0)=0",
+      "form": "monomial",
+      "display": "1.048274*x + 1.319912*x^2 - 0.940058*x^3",
+      "tilde_coeffs": [1.048274, 1.319912, -0.940058],
+      "coeffs": [0.0, 1.048274, 1.319912, -0.940058],
+      "note": "coeffs[0] is always 0 by constraint; tilde_coeffs = coeffs[1:]"
+    },
+
+    "P3": {
+      "description": "P3(x) = x*P_tilde(x), satisfies P3(0)=0",
+      "form": "monomial",
+      "display": "0.522811*x - 0.686510*x^2 - 0.049923*x^3",
+      "tilde_coeffs": [0.522811, -0.686510, -0.049923],
+      "coeffs": [0.0, 0.522811, -0.686510, -0.049923],
+      "note": "coeffs[0] is always 0 by constraint; tilde_coeffs = coeffs[1:]"
+    },
+
+    "Q": {
+      "description": "Q(x) in (1-2x)^k basis, satisfies Q(0)=1",
+      "form": "przz_basis",
+      "display": "0.490464 + 0.636851*(1-2x) - 0.159327*(1-2x)^3 + 0.032011*(1-2x)^5",
+      "coeffs_in_basis_terms": [
+        {"k": 0, "c": 0.490464},
+        {"k": 1, "c": 0.636851},
+        {"k": 3, "c": -0.159327},
+        {"k": 5, "c": 0.032011}
+      ],
+      "coeffs_in_basis": {
+        "constant": 0.490464,
+        "power_1": 0.636851,
+        "power_3": -0.159327,
+        "power_5": 0.032011
+      },
+      "Q0_sum": 0.999999,
+      "Q0_expected": 1.0,
+      "note": "Degree-5 Q for kappa=0.417293962. Sum = 0.490464 + 0.636851 - 0.159327 + 0.032011 = 0.999999"
+    }
+  },
+
+  "targets": {
+    "c": 2.137,
+    "c_precise": 2.13745440613217263636,
+    "kappa": 0.417293962,
+    "kappa_display": ">= 0.417293962",
+    "note": "kappa > 5/12 is the theorem-level headline"
+  },
+
+  "formulas": {
+    "kappa_from_c": "kappa = 1 - log(c)/R",
+    "c_from_kappa": "c = exp(R*(1-kappa))",
+    "sensitivity": "d_kappa/d_c = -1/(R*c) approx -0.359"
+  },
+
+  "self_consistency": {
+    "note": "These computed values should match targets within numerical precision",
+    "kappa_from_c_numeric": 0.41729396199999973,
+    "c_from_kappa_numeric": 2.1374544061321726
+  },
+
+  "validation": {
+    "tolerance_c": 1e-5,
+    "tolerance_kappa": 1e-6
+  }
+}
