@@ -1,0 +1,76 @@
+{
+  "title": "OPTIMIZED POLYNOMIALS ACHIEVING c(R*) = 1",
+  "description": "These polynomials achieve exact saturation c(R*) = 1 for both kappa and kappa*",
+  "generated": "2026-01-04",
+  
+  "universal_P1": {
+    "description": "P1 works for BOTH kappa and kappa* (universal across benchmarks)",
+    "form": "P1(x) = x + x(1-x)*P1_tilde(1-x)",
+    "P1_tilde": [-2.0, 0.9375, 1.0, -0.6],
+    "P1_tilde_exact": {
+      "a0": "-2",
+      "a1": "15/16",
+      "a2": "1",
+      "a3": "-3/5"
+    },
+    "key_insight": "Going BELOW the diagonal (large negative a0) creates destructive interference"
+  },
+  
+  "kappa_config": {
+    "description": "Configuration for kappa (original PRZZ benchmark extended)",
+    "R": 1.14976023153715,
+    "c_at_R": 1.0,
+    "kappa_main": 1.0,
+    "P2_tilde": [0.5241, 1.3199, -0.9401],
+    "P3_tilde": [0.1367, -0.6865, -0.0499],
+    "Q_przz_basis": {
+      "q0": 0.490464,
+      "q1": 0.636851,
+      "q3": -0.159327,
+      "q5": 0.032011
+    },
+    "Q_monomial": [1.0, -0.63785, -0.631484, -1.286264, 2.56088, -1.024352]
+  },
+  
+  "kappa_star_config": {
+    "description": "Configuration for kappa* (simple zeros, linear Q)",
+    "R_star": 1.079655751341322,
+    "c_at_R_star": 1.0,
+    "kappa_star_main": 1.0,
+    "P2_tilde": [1.049837, -0.097446],
+    "P3_tilde": [0.035113, -0.156465],
+    "Q_przz_basis": {
+      "q0": 0.483777,
+      "q1": 0.516223
+    },
+    "Q_monomial": [1.0, -1.032446],
+    "note": "P2/P3 are degree 1 (simpler than kappa config)"
+  },
+  
+  "parameters": {
+    "theta": 0.5714285714285714,
+    "theta_exact": "4/7",
+    "K": 3
+  },
+  
+  "mirror_formula": {
+    "M0": "exp(R) + 5",
+    "M0_exact": "exp(R) + (2K-1) for K=3",
+    "G": "f_I1*g_I1 + (1-f_I1)*g_I2 ~ 1.015",
+    "M": "G * M0",
+    "assembly": "c(R) = S12(+R) + M*S12(-R) + S34(+R)"
+  },
+  
+  "validation": {
+    "kappa": {
+      "R": 1.14976023153715,
+      "c_computed": 1.0000000000000002,
+      "error": "< 1e-15"
+    },
+    "kappa_star": {
+      "R_star": 1.079655751341322,
+      "c_computed": 0.9999999999863611,
+      "error": "1.4e-11"
+    }
+  }
+}

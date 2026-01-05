@@ -52,6 +52,34 @@ from src.local.ratio_classes import (
     compute_ratio_classes,
     print_ratio_class_table,
 )
+from src.local.ratio_atoms import (
+    TaylorCoefficient,
+    RatioAtom,
+    compute_taylor_coefficient,
+    compute_ratio_atom,
+    compute_prime_atoms,
+    print_atom_table,
+    compare_atom_polynomials,
+    endpoint_derivative_analysis,
+)
+from src.local.v_operator import (
+    VZetaCoeffs,
+    compute_vzeta_coeffs,
+    dirichlet_convolve,
+    compute_vzeta_psi_coeffs,
+    load_optimal_Q,
+    load_przz_Q,
+    load_optimal_polynomials_full,
+)
+from src.local.vzeta_moment import (
+    VZetaMomentConfig,
+    VZetaMomentResult,
+    compute_vzeta_psi_moment,
+    compute_full_mollifier_coeffs,
+    delta_sweep,
+    validate_global_limit,
+    compare_optimal_vs_przz,
+)
 
 
 @dataclass
@@ -314,6 +342,31 @@ __all__ = [
     'compute_ratio_class_contribution',
     'compute_ratio_classes',
     'print_ratio_class_table',
+    # Ratio atoms
+    'TaylorCoefficient',
+    'RatioAtom',
+    'compute_taylor_coefficient',
+    'compute_ratio_atom',
+    'compute_prime_atoms',
+    'print_atom_table',
+    'compare_atom_polynomials',
+    'endpoint_derivative_analysis',
+    # V-operator (Phase 3)
+    'VZetaCoeffs',
+    'compute_vzeta_coeffs',
+    'dirichlet_convolve',
+    'compute_vzeta_psi_coeffs',
+    'load_optimal_Q',
+    'load_przz_Q',
+    'load_optimal_polynomials_full',
+    # VZeta moment (Phase 3)
+    'VZetaMomentConfig',
+    'VZetaMomentResult',
+    'compute_vzeta_psi_moment',
+    'compute_full_mollifier_coeffs',
+    'delta_sweep',
+    'validate_global_limit',
+    'compare_optimal_vs_przz',
     # Engine
     'LocalEngineConfig',
     'LocalEngine',
