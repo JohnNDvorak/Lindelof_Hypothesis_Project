@@ -25,7 +25,12 @@ from src.local import (
     LocalEngine,
     FejerKernel,
     print_ratio_class_table,
+    compute_prime_atoms,
+    print_atom_table,
+    compare_atom_polynomials,
+    endpoint_derivative_analysis,
 )
+from src.local.mollifier_coeffs import load_optimal_polynomials, load_przz_polynomials
 
 
 def print_separator(char="=", width=75):
@@ -47,6 +52,56 @@ def print_decomposition_comparison(engine_opt, engine_przz, T, Delta):
           f"{decomp_opt.total/decomp_przz.total:>10.6f}")
     print(f"{'Off/Diag ratio':>20} | {decomp_opt.off_over_diag:>14.6f} | {decomp_przz.off_over_diag:>14.6f} | "
           f"{'-':>10}")
+
+
+def print_ratio_atom_analysis(N, theta):
+    """Print ratio-atom Taylor series analysis."""
+    sigma = 0.5
+
+    # Load polynomials
+    P1_opt, _, _ = load_optimal_polynomials()
+    P1_przz, _, _ = load_przz_polynomials()
+
+    # Small primes for analysis
+    primes = [2, 3, 5, 7]
+
+    print(f"\nOptimal polynomial P₁: tilde_coeffs = {P1_opt.tilde_coeffs}")
+    print(f"PRZZ polynomial P₁: tilde_coeffs = {P1_przz.tilde_coeffs}")
+    print()
+
+    # Endpoint derivative analysis
+    print("Endpoint Derivative P₁'(1) = 1 - a₀:")
+    import numpy as np
+    deriv_opt = P1_opt.eval_deriv(np.array([1.0]), 1)[0]
+    deriv_przz = P1_przz.eval_deriv(np.array([1.0]), 1)[0]
+    a0_opt = P1_opt.tilde_coeffs[0] if len(P1_opt.tilde_coeffs) > 0 else 0
+    a0_przz = P1_przz.tilde_coeffs[0] if len(P1_przz.tilde_coeffs) > 0 else 0
+    print(f"  Optimal: P₁'(1) = {deriv_opt:.6f}  (a₀ = {a0_opt:.6f})")
+    print(f"  PRZZ:    P₁'(1) = {deriv_przz:.6f}  (a₀ = {a0_przz:.6f})")
+    print()
+
+    # Compute prime atoms for optimal
+    print("Prime Atoms - OPTIMAL Polynomials:")
+    atoms_opt = compute_prime_atoms(primes, N, sigma, P1_opt, max_order=2)
+    print_atom_table(atoms_opt)
+    print()
+
+    # Compute prime atoms for PRZZ
+    print("Prime Atoms - PRZZ Baseline:")
+    atoms_przz = compute_prime_atoms(primes, N, sigma, P1_przz, max_order=2)
+    print_atom_table(atoms_przz)
+    print()
+
+    # Compare specific atoms
+    print("Comparison of key atoms (Optimal vs PRZZ):")
+    for (A, B) in [(1, 2), (2, 1), (1, 3), (2, 3)]:
+        if (A, B) in atoms_opt and (A, B) in atoms_przz:
+            I_00_opt = atoms_opt[(A, B)].get_coefficient(0, 0)
+            I_00_przz = atoms_przz[(A, B)].get_coefficient(0, 0)
+            I_01_opt = atoms_opt[(A, B)].get_coefficient(0, 1)
+            I_01_przz = atoms_przz[(A, B)].get_coefficient(0, 1)
+            print(f"  ({A},{B}): I_00 ratio = {I_00_opt/I_00_przz:.6f}, "
+                  f"I_01 ratio = {I_01_opt/I_01_przz:.6f}")
 
 
 def print_ratio_classes_comparison(engine_opt, engine_przz, T, Delta, A_max=30, top_n=20):
@@ -154,6 +209,15 @@ def main():
     print()
 
     # =========================================================================
+    # Part 6: Ratio-Atom Taylor Series Analysis
+    # =========================================================================
+    print_separator("-")
+    print("PART 6: RATIO-ATOM TAYLOR COEFFICIENTS")
+    print_separator("-")
+    print_ratio_atom_analysis(N, theta)
+    print()
+
+    # =========================================================================
     # Summary
     # =========================================================================
     print_separator()
@@ -164,6 +228,8 @@ def main():
     print("1. Is the local moment dominated by diagonal, or by specific ratio classes?")
     print("2. Which ratio classes show the largest optimal vs PRZZ differences?")
     print("3. Do prime atoms (1,p), (p,1), (p,q) dominate, or composite ratios?")
+    print("4. How do Taylor coefficients I_{r,s} differ for optimal vs PRZZ?")
+    print("5. Does the endpoint derivative P₁'(1) = 1 - a₀ show significant structure?")
     print()
     print("Next step: Paste top-20 ratio-class tables to GPT for analysis.")
     print()
