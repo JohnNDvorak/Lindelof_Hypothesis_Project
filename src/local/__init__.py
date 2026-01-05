@@ -79,6 +79,14 @@ from src.local.vzeta_moment import (
     delta_sweep,
     validate_global_limit,
     compare_optimal_vs_przz,
+    # Phase 4 additions
+    compare_same_sigma,
+    validate_global_limit_v2,
+    mesoscopic_sweep,
+    adaptive_delta_sweep,
+    off_diag_comparison_grid,
+    MESOSCOPIC_DELTAS,
+    STANDARD_DELTAS,
 )
 
 
@@ -367,6 +375,14 @@ __all__ = [
     'delta_sweep',
     'validate_global_limit',
     'compare_optimal_vs_przz',
+    # Phase 4: Apples-to-apples diagnostics
+    'compare_same_sigma',
+    'validate_global_limit_v2',
+    'mesoscopic_sweep',
+    'adaptive_delta_sweep',
+    'off_diag_comparison_grid',
+    'MESOSCOPIC_DELTAS',
+    'STANDARD_DELTAS',
     # Engine
     'LocalEngineConfig',
     'LocalEngine',

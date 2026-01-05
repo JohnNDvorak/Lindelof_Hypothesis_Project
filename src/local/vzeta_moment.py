@@ -56,6 +56,7 @@ class VZetaMomentConfig:
         theta: Mollifier exponent (N = T^θ)
         N: Override mollifier length (if None, uses T^θ)
         use_levinson_line: If True, σ = 1/2 - R/log(T); if False, σ = 1/2
+        sigma_override: If set, use this σ directly (bypasses Levinson line)
         n_halfwidth: Number of Fejér zeros for truncation
         n_points_per_zero: Quadrature resolution
     """
@@ -65,12 +66,15 @@ class VZetaMomentConfig:
     theta: float = 4/7
     N: Optional[int] = None
     use_levinson_line: bool = True
+    sigma_override: Optional[float] = None  # Phase 4: bypass Levinson line
     n_halfwidth: float = 4.0
     n_points_per_zero: int = 20
 
     @property
     def sigma(self) -> float:
         """Evaluation point: σ = 1/2 - R/log(T) on Levinson/Conrey line."""
+        if self.sigma_override is not None:
+            return self.sigma_override
         if self.use_levinson_line:
             return 0.5 - self.R / np.log(self.T)
         return 0.5
@@ -89,15 +93,21 @@ class VZetaMomentResult:
 
     Attributes:
         moment: The localized moment value
+        diagonal: Σ|c_k|²k^{-2σ} — the Δ→0 limit (always computed)
+        off_diagonal: moment - diagonal (near-diagonal interference)
+        off_over_diag: off_diagonal / diagonal (normalized cancellation)
         config: Configuration used
         local_result: Full LocalMomentResult from time-domain computation
         vzeta_coeffs: V[ζ] coefficients
         psi_coeffs: Mollifier coefficients (before convolution)
         convolved_coeffs: (V[ζ] · ψ) coefficients after convolution
-        ratio_decomposition: Optional diagonal/off-diagonal decomposition
+        ratio_decomposition: Optional full ratio-domain decomposition
         diagnostics: Additional diagnostic info
     """
     moment: float
+    diagonal: float  # Phase 4: always computed
+    off_diagonal: float  # Phase 4: always computed
+    off_over_diag: float  # Phase 4: always computed
     config: VZetaMomentConfig
     local_result: LocalMomentResult
     vzeta_coeffs: VZetaCoeffs
@@ -233,7 +243,14 @@ def compute_vzeta_psi_moment(
     )
     local_result = compute_local_moment(convolved_coeffs, local_config)
 
-    # Step 6: Optional decomposition
+    # Step 6: Always compute diagonal/off-diagonal (Phase 4)
+    # diagonal = Σ|c_k|²k^{-2σ} — this is the exact Δ→0 limit
+    k_arr = np.arange(1, len(convolved_coeffs), dtype=np.float64)
+    diagonal = np.sum(np.abs(convolved_coeffs[1:])**2 * k_arr**(-2 * config.sigma))
+    off_diagonal = local_result.moment - diagonal
+    off_over_diag = off_diagonal / diagonal if diagonal != 0 else 0.0
+
+    # Step 7: Optional full decomposition
     decomposition = None
     if include_decomposition:
         decomposition = compute_ratio_domain_decomposed(convolved_coeffs, local_config)
@@ -249,10 +266,16 @@ def compute_vzeta_psi_moment(
         'b_1': vzeta_coeffs.b[1],  # Should be Q(0) = 1
         'psi_nonzero': np.count_nonzero(psi_coeffs[1:]),
         'c_nonzero': np.count_nonzero(convolved_coeffs[1:]),
+        'diagonal': diagonal,
+        'off_diagonal': off_diagonal,
+        'off_over_diag': off_over_diag,
     }
 
     return VZetaMomentResult(
         moment=local_result.moment,
+        diagonal=diagonal,
+        off_diagonal=off_diagonal,
+        off_over_diag=off_over_diag,
         config=config,
         local_result=local_result,
         vzeta_coeffs=vzeta_coeffs,
@@ -382,3 +405,233 @@ def compare_optimal_vs_przz(
         'ratio': result_opt.moment / result_przz.moment if result_przz.moment != 0 else float('nan'),
         'target_ratio': 1.0 / 2.137,  # Expected at global limit
     }
+
+
+# ============================================================================
+# Phase 4: Apples-to-Apples Diagnostics
+# ============================================================================
+
+def compare_same_sigma(
+    T: float,
+    Delta: float,
+    sigma: float,
+    **config_kwargs,
+) -> Dict[str, Any]:
+    """Compare optimal and PRZZ moments at identical σ (removes confounding).
+
+    This is the key Phase 4 diagnostic: by fixing σ, we remove the confounding
+    effect of different Levinson lines and get a true apples-to-apples comparison.
+
+    Args:
+        T: Height parameter
+        Delta: Bandwidth
+        sigma: Fixed σ value for both polynomial sets
+        **config_kwargs: Additional config parameters
+
+    Returns:
+        Dictionary with comparison results including off/diag analysis
+    """
+    # Compute with optimal polynomials at fixed σ
+    config_opt = VZetaMomentConfig(
+        T=T, Delta=Delta, sigma_override=sigma, **config_kwargs
+    )
+    result_opt = compute_vzeta_psi_moment(config_opt, use_optimal=True)
+
+    # Compute with PRZZ polynomials at same fixed σ
+    config_przz = VZetaMomentConfig(
+        T=T, Delta=Delta, sigma_override=sigma, **config_kwargs
+    )
+    result_przz = compute_vzeta_psi_moment(config_przz, use_optimal=False)
+
+    return {
+        'T': T,
+        'Delta': Delta,
+        'sigma': sigma,
+        'optimal': {
+            'moment': result_opt.moment,
+            'diagonal': result_opt.diagonal,
+            'off_diagonal': result_opt.off_diagonal,
+            'off_over_diag': result_opt.off_over_diag,
+        },
+        'przz': {
+            'moment': result_przz.moment,
+            'diagonal': result_przz.diagonal,
+            'off_diagonal': result_przz.off_diagonal,
+            'off_over_diag': result_przz.off_over_diag,
+        },
+        'moment_ratio': result_opt.moment / result_przz.moment if result_przz.moment != 0 else float('nan'),
+        'diag_ratio': result_opt.diagonal / result_przz.diagonal if result_przz.diagonal != 0 else float('nan'),
+        'off_diag_ratio': result_opt.off_diagonal / result_przz.off_diagonal if result_przz.off_diagonal != 0 else float('nan'),
+    }
+
+
+def validate_global_limit_v2(
+    T: float,
+    use_optimal: bool = True,
+    target_c: Optional[float] = None,
+    rtol: float = 0.3,
+    **config_kwargs,
+) -> Tuple[bool, float, float]:
+    """Validate using diagonal as exact Δ→0 limit (not extrapolation).
+
+    The key insight: as Δ→0, the Fejér window shrinks to a delta function,
+    so the only surviving terms are k=k' (diagonal). Therefore:
+
+        lim_{Δ→0} M_Δ(T) = Σ_k |c_k|² k^{-2σ} = diagonal
+
+    This is computed exactly, no extrapolation needed.
+
+    Args:
+        T: Height parameter
+        use_optimal: Use optimal or PRZZ polynomials
+        target_c: Expected c value (defaults to 1.0 for optimal, 2.137 for PRZZ)
+        rtol: Relative tolerance for validation
+        **config_kwargs: Additional config parameters
+
+    Returns:
+        (passed, diagonal, error)
+    """
+    if target_c is None:
+        target_c = 1.0 if use_optimal else 2.137
+
+    # Delta doesn't matter since we use diagonal directly
+    config = VZetaMomentConfig(T=T, Delta=1.0, **config_kwargs)
+    result = compute_vzeta_psi_moment(config, use_optimal=use_optimal)
+
+    # diagonal IS the Δ→0 limit
+    diagonal = result.diagonal
+
+    error = abs(diagonal - target_c) / target_c
+    passed = error < rtol
+
+    return passed, diagonal, error
+
+
+# Mesoscopic delta grid for testing wide-window behavior
+MESOSCOPIC_DELTAS = np.array([0.005, 0.01, 0.02, 0.05, 0.1])
+STANDARD_DELTAS = np.array([0.5, 1.0, 2.0, 3.0, 5.0])
+
+
+def mesoscopic_sweep(
+    T: float,
+    use_optimal: bool = True,
+    include_standard: bool = True,
+    **config_kwargs,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Sweep mesoscopic delta values where window width ~ 1/Δ is large.
+
+    This tests Hypothesis 4(a): does cancellation emerge when the
+    averaging length is large (small Δ)?
+
+    Args:
+        T: Height parameter
+        use_optimal: Use optimal or PRZZ polynomials
+        include_standard: Include standard delta values [0.5, 1, 2, 3, 5]
+        **config_kwargs: Additional config parameters
+
+    Returns:
+        (deltas, moments, diagonals, off_over_diags) arrays
+    """
+    if include_standard:
+        all_deltas = np.sort(np.concatenate([MESOSCOPIC_DELTAS, STANDARD_DELTAS]))
+    else:
+        all_deltas = MESOSCOPIC_DELTAS
+
+    moments = []
+    diagonals = []
+    off_over_diags = []
+
+    # Set appropriate R for the polynomial set
+    if 'R' not in config_kwargs:
+        config_kwargs['R'] = 1.14976 if use_optimal else PRZZ_R
+
+    for Delta in all_deltas:
+        config = VZetaMomentConfig(T=T, Delta=Delta, **config_kwargs)
+        result = compute_vzeta_psi_moment(config, use_optimal=use_optimal)
+        moments.append(result.moment)
+        diagonals.append(result.diagonal)
+        off_over_diags.append(result.off_over_diag)
+
+    return all_deltas, np.array(moments), np.array(diagonals), np.array(off_over_diags)
+
+
+def adaptive_delta_sweep(
+    T: float,
+    alphas: Optional[list] = None,
+    use_optimal: bool = True,
+    **config_kwargs,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Use Δ = T^{-α} to scale window width with T.
+
+    This allows the averaging window to grow with T, testing whether
+    cancellation emerges as both T and window width increase together.
+
+    Args:
+        T: Height parameter
+        alphas: Exponents for Δ = T^{-α} (default: [0.2, 0.3, 0.4, 0.5])
+        use_optimal: Use optimal or PRZZ polynomials
+        **config_kwargs: Additional config parameters
+
+    Returns:
+        (deltas, moments, off_over_diags) arrays
+    """
+    if alphas is None:
+        alphas = [0.2, 0.3, 0.4, 0.5]
+
+    deltas = np.array([T ** (-alpha) for alpha in alphas])
+    moments = []
+    off_over_diags = []
+
+    if 'R' not in config_kwargs:
+        config_kwargs['R'] = 1.14976 if use_optimal else PRZZ_R
+
+    for Delta in deltas:
+        config = VZetaMomentConfig(T=T, Delta=Delta, **config_kwargs)
+        result = compute_vzeta_psi_moment(config, use_optimal=use_optimal)
+        moments.append(result.moment)
+        off_over_diags.append(result.off_over_diag)
+
+    return deltas, np.array(moments), np.array(off_over_diags)
+
+
+def off_diag_comparison_grid(
+    T_values: list,
+    Delta_values: list,
+    sigma: Optional[float] = None,
+) -> Dict[str, Any]:
+    """Systematic comparison of off/diag across T and Δ grid.
+
+    This is the key Phase 4 test: does optimal have systematically
+    more negative off/diag than PRZZ?
+
+    Args:
+        T_values: List of T values to test
+        Delta_values: List of Delta values to test
+        sigma: If set, use fixed σ; otherwise use each set's Levinson line
+
+    Returns:
+        Dictionary with full comparison grid
+    """
+    results = {
+        'T_values': T_values,
+        'Delta_values': Delta_values,
+        'sigma': sigma,
+        'grid': [],
+    }
+
+    for T in T_values:
+        for Delta in Delta_values:
+            if sigma is not None:
+                comp = compare_same_sigma(T, Delta, sigma)
+            else:
+                comp = compare_optimal_vs_przz(T, Delta)
+
+            results['grid'].append({
+                'T': T,
+                'Delta': Delta,
+                'opt_off_over_diag': comp['optimal']['off_over_diag'] if 'off_over_diag' in comp['optimal'] else None,
+                'przz_off_over_diag': comp['przz']['off_over_diag'] if 'off_over_diag' in comp['przz'] else None,
+                'moment_ratio': comp.get('moment_ratio', comp.get('ratio')),
+            })
+
+    return results
