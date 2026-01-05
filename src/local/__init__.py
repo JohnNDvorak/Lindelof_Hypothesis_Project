@@ -88,6 +88,16 @@ from src.local.vzeta_moment import (
     MESOSCOPIC_DELTAS,
     STANDARD_DELTAS,
 )
+from src.local.actual_zeta_probe import (
+    ActualZetaResult,
+    ComparisonResult,
+    compute_zeta_psi_actual,
+    compare_actual_vs_dirichlet,
+    run_sanity_test_grid,
+    summarize_results,
+    format_results_table,
+    quick_test,
+)
 
 
 @dataclass
@@ -383,6 +393,15 @@ __all__ = [
     'off_diag_comparison_grid',
     'MESOSCOPIC_DELTAS',
     'STANDARD_DELTAS',
+    # Phase 5: Actual zeta sanity test
+    'ActualZetaResult',
+    'ComparisonResult',
+    'compute_zeta_psi_actual',
+    'compare_actual_vs_dirichlet',
+    'run_sanity_test_grid',
+    'summarize_results',
+    'format_results_table',
+    'quick_test',
     # Engine
     'LocalEngineConfig',
     'LocalEngine',
